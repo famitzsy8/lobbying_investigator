@@ -4,13 +4,18 @@ Currently the codebase is organized in the following manner:
 
 ## Main base
 
-- `agents`: Contains the multi-agent experiments
 - `ragmcp`: main logic of the MCP server
+- `agentServer`: Contains the multi-agent experiments
+- `frontend_demo`: Frontend logic
 
-## Analysis & Experiments
+## Docker compose setups
 
-- `mcp_analysis`: Where the experiments for the MCP functions are done. Contains more functions than in `congressMCP`
-- `helper`: Experiments that give us helpful information for all the subdirectories
+- `prod.yml`: The **complete** docker compose setup for the remote deployment
+- `docker-compose.yml`: The **complete and working** docker compose setup for local deployment
+- `debug-mcp.yml`: Starting the MCP container only
+- `debug-agents.yml`: Starting the MCP server/container and the agents container
+- `debug-frontend.yml`: Starting MCP & Agents and frontend container (without actually starting the service)
+- `debug-prod-XXX.yml`: Claude Code copies of the debug files above to test remote deployment
 
 ## Secrets.ini Structure
 
