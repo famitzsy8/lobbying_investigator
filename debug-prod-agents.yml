@@ -1,0 +1,51 @@
+services:
+  ragmcp:
+    build:
+      context: ./ragmcp
+      dockerfile: Dockerfile
+    container_name: ragmcp_server
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    volumes:
+      - ./ragmcp:/app
+    command: ["python", "main.py"]
+    secrets:
+      - source: app_ini
+        target: secrets.ini
+    environment:
+      SECRETS_INI_FILE: /run/secrets/secrets.ini
+    restart: unless-stopped
+
+  agentserver:
+    build:
+      context: ./agentServer
+      dockerfile: Dockerfile
+    container_name: agent_server_debug
+    ports:
+      - "8766:8766"
+    networks:
+      - app-network
+    volumes:
+      - ./agentServer:/app
+    stdin_open: true
+    tty: true
+    depends_on:
+      - ragmcp
+    secrets:
+      - source: app_ini
+        target: secrets.ini
+    environment:
+      - RAGMCP_URL=http://ragmcp:8080
+      - SECRETS_INI_FILE=/run/secrets/secrets.ini
+    # Keep container running without auto-starting for debugging
+    command: ["tail", "-f", "/dev/null"]
+
+networks:
+  app-network:
+    driver: bridge
+
+secrets:
+  app_ini:
+    file: ./secrets.ini

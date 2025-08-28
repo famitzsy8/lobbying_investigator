@@ -1,0 +1,98 @@
+services:
+  ragmcp:
+    build:
+      context: ./ragmcp
+      dockerfile: Dockerfile
+    container_name: ragmcp_server
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    volumes:
+      - ./ragmcp:/app
+    command: ["python", "main.py"]
+    secrets:
+      - source: app_ini
+        target: secrets.ini
+    environment:
+      SECRETS_INI_FILE: /run/secrets/secrets.ini
+    restart: unless-stopped
+
+  agentserver:
+    build:
+      context: ./agentServer
+      dockerfile: Dockerfile
+    container_name: agent_server
+    ports:
+      - "8766:8766"
+    networks:
+      - app-network
+    volumes:
+      - ./agentServer:/app
+    depends_on:
+      - ragmcp
+    secrets:
+      - source: app_ini
+        target: secrets.ini
+    environment:
+      - RAGMCP_URL=http://ragmcp:8080
+      - SECRETS_INI_FILE=/run/secrets/secrets.ini
+    command: ["python", "start_server_with_logging.py"]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend_demo
+      dockerfile: Dockerfile
+    container_name: frontend_demo
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    depends_on:
+      - agentserver
+    environment:
+      - NEXT_TELEMETRY_DISABLED=1
+      - NEXT_PUBLIC_WEBSOCKET_URL=ws://68.183.152.69:8766
+      - NEXT_PUBLIC_RAGMCP_URL=http://68.183.152.69:8080
+    volumes:
+      - ./frontend_demo:/app
+      - /app/node_modules
+    stdin_open: true
+    tty: true
+    # Run in development mode for debugging
+    command: ["npm", "run", "dev"]
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_reverse_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - agentserver
+      - ragmcp
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  app-network:
+    driver: bridge
+
+secrets:
+  app_ini:
+    file: ./secrets.ini

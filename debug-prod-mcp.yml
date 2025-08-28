@@ -1,0 +1,30 @@
+services:
+  ragmcp:
+    build:
+      context: ./ragmcp
+      dockerfile: Dockerfile
+    container_name: ragmcp_server_debug
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    volumes:
+      - ./ragmcp:/app
+    stdin_open: true
+    tty: true
+    # Keep container running without auto-starting main.py for debugging
+    command: ["tail", "-f", "/dev/null"]
+    secrets:
+      - source: app_ini
+        target: secrets.ini
+    environment:
+      SECRETS_INI_FILE: /run/secrets/secrets.ini
+    restart: "no"
+
+networks:
+  app-network:
+    driver: bridge
+
+secrets:
+  app_ini:
+    file: ./secrets.ini
